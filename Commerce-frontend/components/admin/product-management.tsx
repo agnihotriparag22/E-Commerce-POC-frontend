@@ -103,26 +103,26 @@ export function ProductManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{product.category}</TableCell>
-                  <TableCell>${product.price}</TableCell>
-                  <TableCell>{product.stock}</TableCell>
+              {data?.products.map((products) => (
+                <TableRow key={products.id}>
+                  <TableCell className="font-medium">{products.name}</TableCell>
+                  <TableCell>{products.category.name}</TableCell>
+                  <TableCell>${products.price}</TableCell>
+                  <TableCell>{products.stock}</TableCell>
                   <TableCell>
-                    <Badge variant={product.stock > 0 ? "default" : "destructive"}>
-                      {product.stock > 0 ? "In Stock" : "Out of Stock"}
+                    <Badge variant={products.stock > 0 ? "default" : "destructive"}>
+                      {products.stock > 0 ? "In Stock" : "Out of Stock"}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(product)}>
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(products)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(product.id)}
+                        onClick={() => handleDelete(products.id.toString())}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />

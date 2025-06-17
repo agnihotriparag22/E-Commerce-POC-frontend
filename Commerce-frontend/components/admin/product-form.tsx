@@ -1,7 +1,7 @@
 "use client"
 
 import { useForm } from "react-hook-form"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { productsApi } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,7 @@ interface ProductFormData {
   name: string
   description: string
   price: number
-  category: string
+  category_id: number  // Changed from category to category_id
   stock: number
   image: string
 }
@@ -29,6 +29,17 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
+  // Fetch categories from backend
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      // You'll need to add this endpoint to your API
+      const response = await fetch("http://localhost:8002/api/v1/categories")
+      if (!response.ok) throw new Error("Failed to fetch categories")
+      return response.json()
+    }
+  })
+
   const {
     register,
     handleSubmit,
@@ -41,7 +52,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
           name: product.name,
           description: product.description,
           price: product.price,
-          category: product.category,
+          category_id: product.category_id, // Use category_id
           stock: product.stock,
           image: product.image,
         }
@@ -49,7 +60,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
           name: "",
           description: "",
           price: 0,
-          category: "",
+          category_id: 0, // Default to 0 or first category
           stock: 0,
           image: "/placeholder.svg?height=300&width=300",
         },
@@ -65,6 +76,13 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
       })
       onSuccess()
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create product",
+        variant: "destructive",
+      })
+    },
   })
 
   const updateMutation = useMutation({
@@ -77,9 +95,26 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
       })
       onSuccess()
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update product",
+        variant: "destructive",
+      })
+    },
   })
 
   const onSubmit = (data: ProductFormData) => {
+    // Validate category_id
+    if (!data.category_id || data.category_id === 0) {
+      toast({
+        title: "Error",
+        description: "Please select a category",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (product) {
       updateMutation.mutate({ id: product.id, data })
     } else {
@@ -104,18 +139,23 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
-          <Select value={watch("category")} onValueChange={(value) => setValue("category", value)}>
+          <Select 
+            value={watch("category_id")?.toString() || ""} 
+            onValueChange={(value) => setValue("category_id", parseInt(value))}
+            disabled={categoriesLoading}
+          >
             <SelectTrigger>
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder={categoriesLoading ? "Loading..." : "Select category"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Electronics">Electronics</SelectItem>
-              <SelectItem value="Sports">Sports</SelectItem>
-              <SelectItem value="Home">Home</SelectItem>
-              <SelectItem value="Fashion">Fashion</SelectItem>
-              <SelectItem value="Books">Books</SelectItem>
+              {categories.map((category: any) => (
+                <SelectItem key={category.id} value={category.id.toString()}>
+                  {category.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+          {errors.category_id && <p className="text-sm text-red-500">Category is required</p>}
         </div>
       </div>
 
@@ -175,5 +215,4 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
         </Button>
       </div>
     </form>
-  )
-}
+  )}

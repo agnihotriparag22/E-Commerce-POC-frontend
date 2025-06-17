@@ -22,12 +22,13 @@ export function AdminStats() {
   const totalCustomers = new Set(orders.map((o) => o.userId)).size
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-    }).format(price)
-  }
+  if (typeof price !== "number" || isNaN(price)) return "₹0";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+  }).format(price)
+}
 
   const stats = [
     {

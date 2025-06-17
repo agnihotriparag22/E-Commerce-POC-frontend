@@ -20,12 +20,26 @@ export function RecentOrders() {
 
   const recentOrders = orders.slice(0, 5)
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | undefined | null) => {
+    if (price === undefined || price === null || isNaN(price)) {
+      return "₹0"
+    }
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 0,
     }).format(price)
+  }
+
+  const formatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return "N/A"
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return "Invalid Date"
+    return date.toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    })
   }
 
   const getStatusColor = (status: string) => {
@@ -66,11 +80,18 @@ export function RecentOrders() {
               <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded">
                 <div>
                   <p className="font-normal">Order #{order.id}</p>
-                  <p className="text-sm text-gray-600 font-light">{new Date(order.createdAt).toLocaleDateString()}</p>
+                  <p className="text-sm text-gray-600 font-light">{formatDate(order.createdAt)}</p>
+                  {order.product && (
+                    <p className="text-sm text-gray-600 font-light mt-1">
+                      {order.product.name} × {order.quantity}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
-                  <p className="font-normal">{formatPrice(order.total)}</p>
+                  <p className="font-normal">
+                    {order.product ? formatPrice(order.product.price * order.quantity) : formatPrice(0)}
+                  </p>
                   <Button variant="outline" size="sm" className="border-gray-300 bg-white hover:bg-gray-50">
                     <Eye className="h-4 w-4" />
                   </Button>
