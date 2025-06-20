@@ -432,6 +432,22 @@ export interface Order {
   };
 }
 
+export interface OrderWithTotal {
+  id: number;
+  product_id: string;
+  quantity: number;
+  status: OrderStatus;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+  total: number;
+  product?: {
+    id: number;
+    name: string;
+    price: number;
+  };
+}
+
 export interface CreateOrderRequest {
   product_id: string;
   quantity: number;
@@ -467,7 +483,82 @@ export const ordersApi = {
 
     return response.json();
   },
+  async getAllOrdersWithTotals(): Promise<OrderWithTotal[]> {
+    try {
+      const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
+      const response = await fetch(`${API_BASE_URL.orders}/orders`, {
+        headers,
+      });
 
+      if (!response.ok) {
+        if (response.status === 401) {
+          authApi.clearToken();
+          throw new Error('Session expired. Please login again.');
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to fetch orders');
+      }
+
+      const orders: OrderWithTotal[] = await response.json();
+
+      // Fetch product details for each order
+      const ordersWithProducts = await Promise.all(
+        orders.map(async (order) => {
+          try {
+            const product = await productsApi.getProduct(order.product_id);
+            return {
+              ...order,
+              product: {
+                id: product.id,
+                name: product.name,
+                price: product.price
+              }
+            };
+          } catch (error) {
+            console.error(`Failed to fetch product details for order ${order.id}:`, error);
+            return order;
+          }
+        })
+      );
+
+      return ordersWithProducts;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Session expired')) {
+        throw error;
+      }
+      console.error('Orders API Error:', error);
+      throw new Error('Failed to fetch orders with totals');
+    }
+  },
+
+// Update order status (for admin)
+async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
+  try {
+    const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
+    const response = await fetch(`${API_BASE_URL.orders}/orders/${orderId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        authApi.clearToken();
+        throw new Error('Session expired. Please login again.');
+      }
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Failed to update order status');
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Session expired')) {
+      throw error;
+    }
+    throw new Error('Failed to update order status');
+    }
+  },
+  
   async getOrders(userId?: number): Promise<Order[]> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
@@ -558,7 +649,6 @@ export const ordersApi = {
       throw new Error('Failed to fetch order');
     }
   },
-
   async updateOrder(orderId: number, order: CreateOrderRequest): Promise<Order> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);

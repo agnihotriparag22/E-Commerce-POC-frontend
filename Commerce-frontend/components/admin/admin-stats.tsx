@@ -11,24 +11,30 @@ export function AdminStats() {
     queryFn: () => productsApi.getProducts({ limit: 1000 }),
   })
 
+  // Use the new method that returns orders with totals
   const { data: orders = [] } = useQuery({
-    queryKey: ["admin-orders"],
-    queryFn: () => ordersApi.getOrders(),
+    queryKey: ["admin-orders-with-totals"],
+    queryFn: () => ordersApi.getAllOrdersWithTotals(),
   })
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0)
+  // Calculate total revenue from orders with totals
+  const totalRevenue = orders.reduce((sum, order) => {
+    const orderTotal = typeof order.total === 'number' ? order.total : 0;
+    return sum + orderTotal;
+  }, 0)
+  
   const totalProducts = productsData?.total || 0
   const totalOrders = orders.length
-  const totalCustomers = new Set(orders.map((o) => o.userId)).size
+  const totalCustomers = new Set(orders.map((o) => o.user_id)).size
 
   const formatPrice = (price: number) => {
-  if (typeof price !== "number" || isNaN(price)) return "₹0";
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 0,
-  }).format(price)
-}
+    if (typeof price !== "number" || isNaN(price)) return "₹0";
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+    }).format(price)
+  }
 
   const stats = [
     {
