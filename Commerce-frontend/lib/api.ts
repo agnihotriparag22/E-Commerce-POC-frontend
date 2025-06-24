@@ -477,6 +477,9 @@ export const ordersApi = {
         authApi.clearToken();
         throw new Error('Session expired. Please login again.');
       }
+      if (response.status === 400 || response.status === 404) {
+        throw new Error('Failed to place order');
+      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.detail || 'Failed to create order');
     }
