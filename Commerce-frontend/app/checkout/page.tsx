@@ -21,10 +21,6 @@ interface CheckoutForm {
   firstName: string
   lastName: string
   email: string
-  address: string
-  city: string
-  state: string
-  zipCode: string
   cardNumber: string
   expiryDate: string
   cvv: string
@@ -61,10 +57,6 @@ export default function CheckoutPage() {
       firstName: "",
       lastName: "",
       email: user?.email || "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
       cardNumber: "",
       expiryDate: "",
       cvv: "",
@@ -210,54 +202,6 @@ export default function CheckoutPage() {
                         className={`border-gray-300 ${errors.email ? "border-red-500" : ""}`}
                       />
                       {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="address" className="font-normal">
-                        Address
-                      </Label>
-                      <Input
-                        id="address"
-                        {...register("address", { required: "Address is required" })}
-                        className={`border-gray-300 ${errors.address ? "border-red-500" : ""}`}
-                      />
-                      {errors.address && <p className="text-sm text-red-500">{errors.address.message}</p>}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="city" className="font-normal">
-                          City
-                        </Label>
-                        <Input
-                          id="city"
-                          {...register("city", { required: "City is required" })}
-                          className={`border-gray-300 ${errors.city ? "border-red-500" : ""}`}
-                        />
-                        {errors.city && <p className="text-sm text-red-500">{errors.city.message}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="state" className="font-normal">
-                          State
-                        </Label>
-                        <Input
-                          id="state"
-                          {...register("state", { required: "State is required" })}
-                          className={`border-gray-300 ${errors.state ? "border-red-500" : ""}`}
-                        />
-                        {errors.state && <p className="text-sm text-red-500">{errors.state.message}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="zipCode" className="font-normal">
-                          PIN Code
-                        </Label>
-                        <Input
-                          id="zipCode"
-                          {...register("zipCode", { required: "PIN code is required" })}
-                          className={`border-gray-300 ${errors.zipCode ? "border-red-500" : ""}`}
-                        />
-                        {errors.zipCode && <p className="text-sm text-red-500">{errors.zipCode.message}</p>}
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
