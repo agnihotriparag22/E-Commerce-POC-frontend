@@ -1,6 +1,6 @@
 "use client"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { ordersApi, OrderStatus } from "@/lib/api"
+import { ordersApi, OrderStatus, Order } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -11,11 +11,11 @@ export function OrderManagement() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
-  // Use the new method that returns orders with totals
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["admin-orders-with-totals"],
-    queryFn: () => ordersApi.getAllOrdersWithTotals(),
-  })
+  const { data, isLoading } = useQuery<Order[]>({
+    queryKey: ["admin-all-orders"],
+    queryFn: () => ordersApi.getAllCustomersOrders(),
+  });
+  const orders = data ?? [];
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: OrderStatus }) => 
@@ -98,7 +98,6 @@ export function OrderManagement() {
                 <TableHead className="font-normal">Product</TableHead>
                 <TableHead className="font-normal">Quantity</TableHead>
                 <TableHead className="font-normal">Date</TableHead>
-                <TableHead className="font-normal">Total</TableHead>
                 <TableHead className="font-normal">Status</TableHead>
                 <TableHead className="font-normal">Actions</TableHead>
               </TableRow>
@@ -108,16 +107,9 @@ export function OrderManagement() {
                 <TableRow key={order.id}>
                   <TableCell className="font-normal">#{order.id}</TableCell>
                   <TableCell className="font-light">User {order.user_id}</TableCell>
-                  <TableCell className="font-light">
-                    {order.product?.name || `Product ${order.product_id}`}
-                  </TableCell>
+                  <TableCell className="font-light">{order.product_id}</TableCell>
                   <TableCell className="font-light">{order.quantity}</TableCell>
-                  <TableCell className="font-light">
-                    {new Date(order.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="font-normal">
-                    {formatPrice(order.total)}
-                  </TableCell>
+                  <TableCell className="font-light">{order.created_at}</TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(order.status)}>
                       {order.status}

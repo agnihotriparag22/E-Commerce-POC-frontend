@@ -431,6 +431,11 @@ export interface Order {
     price: number;
   };
 }
+export interface OrderSummary {
+  total_orders: number;
+  total_customers: number;
+  unique_customers: number;
+}
 
 export interface OrderWithTotal {
   id: number;
@@ -486,10 +491,11 @@ export const ordersApi = {
 
     return response.json();
   },
-  async getAllOrdersWithTotals(): Promise<OrderWithTotal[]> {
+  
+  async getAllOrdersWithTotals(): Promise<OrderSummary> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.orders}/orders`, {
+      const response = await fetch(`${API_BASE_URL.orders}/orders/summary`, {
         headers,
       });
 
@@ -499,32 +505,16 @@ export const ordersApi = {
           throw new Error('Session expired. Please login again.');
         }
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to fetch orders');
+        throw new Error(
+          errorData.detail ||
+          (typeof errorData === 'string' ? errorData : JSON.stringify(errorData) || 'Failed to fetch orders')
+        );
       }
 
-      const orders: OrderWithTotal[] = await response.json();
-
-      // Fetch product details for each order
-      const ordersWithProducts = await Promise.all(
-        orders.map(async (order) => {
-          try {
-            const product = await productsApi.getProduct(order.product_id);
-            return {
-              ...order,
-              product: {
-                id: product.id,
-                name: product.name,
-                price: product.price
-              }
-            };
-          } catch (error) {
-            console.error(`Failed to fetch product details for order ${order.id}:`, error);
-            return order;
-          }
-        })
-      );
-
-      return ordersWithProducts;
+      const data = await response.json();
+      console.log(data);
+      // data: { total_orders, total_customers, unique_customers }
+      return data;
     } catch (error) {
       if (error instanceof Error && error.message.includes('Session expired')) {
         throw error;
@@ -754,7 +744,41 @@ async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
       }
       throw new Error('Failed to cancel order');
     }
-  }
+  },
+
+  async getAllCustomersOrders(): Promise<Order[]> {
+    try {
+      const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
+      const response = await fetch(`${API_BASE_URL.orders}/orders`, {
+        headers,
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          authApi.clearToken();
+          throw new Error('Session expired. Please login again.');
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to fetch all customers orders');
+      }
+
+      const data = await response.json();
+      // If backend returns { orders: [...] }, extract orders
+      if (Array.isArray(data)) {
+        return data;
+      } else if (Array.isArray(data.orders)) {
+        return data.orders;
+      } else {
+        return [];
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Session expired')) {
+        throw error;
+      }
+      console.error('Orders API Error:', error);
+      throw new Error('Failed to fetch all customers orders');
+    }
+  },
 };
 
 // Payment types based on backend schema
@@ -810,6 +834,27 @@ export const paymentsApi = {
       }
       throw new Error('Failed to process payment');
     }
+  },
+
+  async getTotalSuccessfulPayments(): Promise<number> {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+  
+    const response = await fetch(`${API_BASE_URL.payment}/payments/successful`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Failed to fetch payments');
+    }
+  
+    const data = await response.json();
+    return data.total_successful_payments || 0;
   },
 
   async getPayment(paymentId: number): Promise<Payment> {

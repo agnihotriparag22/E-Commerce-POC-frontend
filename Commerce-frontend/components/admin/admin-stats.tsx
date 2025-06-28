@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { productsApi, ordersApi } from "@/lib/api"
+import { productsApi, paymentsApi, ordersApi } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Package, ShoppingCart, DollarSign, Users } from "lucide-react"
 
@@ -11,21 +11,21 @@ export function AdminStats() {
     queryFn: () => productsApi.getProducts({ limit: 1000 }),
   })
 
-  // Use the new method that returns orders with totals
-  const { data: orders = [] } = useQuery({
+  // Use the new method that returns order summary
+  const { data: orderSummary = { total_orders: 0, total_customers: 0, unique_customers: 0 } } = useQuery({
     queryKey: ["admin-orders-with-totals"],
     queryFn: () => ordersApi.getAllOrdersWithTotals(),
   })
 
-  // Calculate total revenue from orders with totals
-  const totalRevenue = orders.reduce((sum, order) => {
-    const orderTotal = typeof order.total === 'number' ? order.total : 0;
-    return sum + orderTotal;
-  }, 0)
-  
+  // Fetch total revenue from paymentsApi
+  const { data: totalRevenue = 0 } = useQuery({
+    queryKey: ["admin-total-revenue"],
+    queryFn: () => paymentsApi.getTotalSuccessfulPayments(),
+  })
+
   const totalProducts = productsData?.total || 0
-  const totalOrders = orders.length
-  const totalCustomers = new Set(orders.map((o) => o.user_id)).size
+  const totalOrders = orderSummary.total_orders
+  const totalCustomers = orderSummary.unique_customers
 
   const formatPrice = (price: number) => {
     if (typeof price !== "number" || isNaN(price)) return "₹0";
