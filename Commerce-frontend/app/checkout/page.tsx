@@ -94,29 +94,28 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Create orders with payment information included
-      const orderPromises = items.map(item => 
-        ordersApi.createOrder({
+      // Calculate total amount for all items
+      const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      // Send a single order request with all items
+      await ordersApi.createOrder({
+        user_id: user?.id || 0,
+        items: items.map(item => ({
           product_id: item.id.toString(),
           quantity: item.quantity,
-          user_id: user?.id || 0,
-          payment_info: {
-            card_number: data.cardNumber.replace(/\s/g, ''),
-            card_holder_name: `${data.firstName} ${data.lastName}`,
-            expiry_date: data.expiryDate,
-            cvv: data.cvv,
-            amount: item.price * item.quantity,
-          },
-          
-        })
-      );
-
-      // Wait for all orders to be created and processed
-      const orders = await Promise.all(orderPromises);
+        })),
+        payment_info: {
+          card_number: data.cardNumber.replace(/\s/g, ''),
+          card_holder_name: `${data.firstName} ${data.lastName}`,
+          expiry_date: data.expiryDate,
+          cvv: data.cvv,
+          amount: totalAmount,
+        },
+      });
 
       clearCart();
       toast({
-        title: "Orders placed successfully!",
+        title: "Order placed successfully!",
         description: "Thank you for your purchase. You will receive a confirmation email shortly.",
       });
       router.push("/dashboard");

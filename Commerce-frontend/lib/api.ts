@@ -454,16 +454,15 @@ export interface OrderWithTotal {
 }
 
 export interface CreateOrderRequest {
-  product_id: string;
-  quantity: number;
   user_id: number;
+  items: { product_id: string; quantity: number }[];
   payment_info: {
     card_number: string;
     card_holder_name: string;
     expiry_date: string;
     cvv: string;
     amount: number;
-  }
+  };
 }
 
 
