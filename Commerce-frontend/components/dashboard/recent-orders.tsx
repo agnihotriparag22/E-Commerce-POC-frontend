@@ -72,7 +72,7 @@ export function RecentOrders() {
     enabled: !!user,
   })
 
-  const recentOrders = orders.slice(0, 5)
+  const recentOrders = orders.slice(0, 20)
 
   const formatPrice = (price: number | undefined | null) => {
     if (price === undefined || price === null || isNaN(price)) {
@@ -115,9 +115,9 @@ export function RecentOrders() {
     <Card className="border border-gray-200 shadow-none">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="font-normal">Recent Orders</CardTitle>
-        <Button variant="outline" size="sm" className="border-gray-300 bg-white hover:bg-gray-50" asChild>
+        {/* <Button variant="outline" size="sm" className="border-gray-300 bg-white hover:bg-gray-50" asChild>
           <Link href="/orders">View All</Link>
-        </Button>
+        </Button> */}
       </CardHeader>
       <CardContent>
         {isLoading ? (
