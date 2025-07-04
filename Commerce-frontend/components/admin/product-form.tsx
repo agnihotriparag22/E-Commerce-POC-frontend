@@ -34,7 +34,7 @@ export function ProductForm({ product, onSuccess }: ProductFormProps) {
     queryKey: ["categories"],
     queryFn: async () => {
       // You'll need to add this endpoint to your API
-      const response = await fetch("http://localhost:8002/api/v1/categories")
+      const response = await fetch("http://localhost:8002/api/v1/categories/")
       if (!response.ok) throw new Error("Failed to fetch categories")
       return response.json()
     }

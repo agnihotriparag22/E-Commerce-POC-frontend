@@ -1,9 +1,9 @@
 // Mock API implementation - replace with real API calls
 const API_BASE_URL = {
-  orders: "http://localhost:8000/api/v1",
-  auth: "http://localhost:8001/api/v1",
-  products: "http://localhost:8002/api/v1",
-  payment: "http://localhost:8003/api/v1",
+  orders: "http://localhost:8000/api/v1/",
+  auth: "http://localhost:8001/api/v1/",
+  products: "http://localhost:8002/api/v1/",
+  payment: "http://localhost:8003/api/v1/",
 }
 
 // Simulate API delay
@@ -71,7 +71,7 @@ const getAuthHeaders = async (tokenTimestamp: number | null, requireAuth: boolea
 
 export const authApi = {
   async login(email: string, password: string): Promise<LoginResponse> {
-    const response = await fetch(`${API_BASE_URL.auth}/login`, {
+          const response = await fetch(`${API_BASE_URL.auth}login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -93,7 +93,7 @@ export const authApi = {
   async verifyToken(token: string): Promise<LoginResponse['user']> {
     try {
       // First try the /verify endpoint
-      const response = await fetch(`${API_BASE_URL.auth}/verify`, {
+      const response = await fetch(`${API_BASE_URL.auth}verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ export const authApi = {
       }
 
       // If /verify fails, try /verify-token as fallback
-      const fallbackResponse = await fetch(`${API_BASE_URL.auth}/verify-token`, {
+      const fallbackResponse = await fetch(`${API_BASE_URL.auth}verify-token`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -202,7 +202,7 @@ export const productsApi = {
     try {
       // Product listing is public, so requireAuth is false
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), false);
-      const response = await fetch(`${API_BASE_URL.products}/products?${queryParams.toString()}`, {
+      const response = await fetch(`${API_BASE_URL.products}products?${queryParams.toString()}`, {
         headers,
       });
       
@@ -227,7 +227,7 @@ export const productsApi = {
   async getCategories(): Promise<Category[]> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), false);
-      const response = await fetch(`${API_BASE_URL.products}/categories`, {
+      const response = await fetch(`${API_BASE_URL.products}categories`, {
         headers,
       });
       
@@ -245,7 +245,7 @@ export const productsApi = {
     try {
       // Product details are public
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), false);
-      const response = await fetch(`${API_BASE_URL.products}/products/${id}`, {
+      const response = await fetch(`${API_BASE_URL.products}products/${id}`, {
         headers,
       });
 
@@ -294,7 +294,7 @@ export const productsApi = {
       console.log('Creating product with data:', cleanProduct);
       
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.products}/products`, {
+      const response = await fetch(`${API_BASE_URL.products}products`, {
         method: 'POST',
         headers,
         body: JSON.stringify(cleanProduct),
@@ -345,7 +345,7 @@ export const productsApi = {
       if (updates.category_id !== undefined) cleanUpdates.category_id = Number(updates.category_id);
 
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.products}/products/${id}`, {
+      const response = await fetch(`${API_BASE_URL.products}products/${id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify(cleanUpdates),
@@ -385,7 +385,7 @@ export const productsApi = {
   async deleteProduct(id: string): Promise<{ success: boolean }> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.products}/products/${id}`, {
+      const response = await fetch(`${API_BASE_URL.products}products/${id}`, {
         method: 'DELETE',
         headers,
       });
@@ -420,17 +420,17 @@ export enum OrderStatus {
 
 export interface Order {
   id: number;
-  product_id: string;
-  quantity: number;
-  status: OrderStatus;
   user_id: number;
+  status: OrderStatus;
   created_at: string;
-  product?: {
-    id: number;
-    name: string;
-    price: number;
-  };
+  updated_at: string;
+  items: {
+    product_id: string;
+    quantity: number;
+    product?: { id: number; name: string; price: number };
+  }[];
 }
+
 export interface OrderSummary {
   total_orders: number;
   total_customers: number;
@@ -470,7 +470,7 @@ export const ordersApi = {
   async createOrder(order: CreateOrderRequest): Promise<Order> {
     console.log(order);
     const headers = await getAuthHeaders(authApi.getTokenTimestamp());
-    const response = await fetch(`${API_BASE_URL.orders}/orders`, {
+    const response = await fetch(`${API_BASE_URL.orders}orders`, {
       method: 'POST',
       headers,
       body: JSON.stringify(order),
@@ -494,7 +494,7 @@ export const ordersApi = {
   async getAllOrdersWithTotals(): Promise<OrderSummary> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.orders}/orders/summary`, {
+      const response = await fetch(`${API_BASE_URL.orders}orders/summary`, {
         headers,
       });
 
@@ -527,7 +527,7 @@ export const ordersApi = {
 async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
   try {
     const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-    const response = await fetch(`${API_BASE_URL.orders}/orders/${orderId}`, {
+    const response = await fetch(`${API_BASE_URL.orders}orders/${orderId}`, {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ status }),
@@ -557,8 +557,8 @@ async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
       
       // Use the correct endpoint based on your FastAPI routes
       const url = userId 
-        ? `${API_BASE_URL.orders}/orders/user/${userId}`  // Fixed: Use the correct endpoint
-        : `${API_BASE_URL.orders}/orders`;
+        ? `${API_BASE_URL.orders}orders/user/${userId}`  // Fixed: Use the correct endpoint
+        : `${API_BASE_URL.orders}orders`;
       
       const response = await fetch(url, {
         headers,
@@ -585,7 +585,7 @@ async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
       const ordersWithProducts = await Promise.all(
         orders.map(async (order) => {
           try {
-            const product = await productsApi.getProduct(order.product_id);
+            const product = await productsApi.getProduct(order.items[0].product_id);
             return {
               ...order,
               product: {
@@ -614,7 +614,7 @@ async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
   async getOrder(orderId: number): Promise<Order> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.orders}/orders/${orderId}`, {
+      const response = await fetch(`${API_BASE_URL.orders}orders/${orderId}`, {
         headers,
       });
 
@@ -644,7 +644,7 @@ async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
   async updateOrder(orderId: number, order: CreateOrderRequest): Promise<Order> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.orders}/orders/${orderId}`, {
+      const response = await fetch(`${API_BASE_URL.orders}orders/${orderId}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify(order),
@@ -671,7 +671,7 @@ async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
   async deleteOrder(orderId: number): Promise<void> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.orders}/orders/${orderId}`, {
+      const response = await fetch(`${API_BASE_URL.orders}orders/${orderId}`, {
         method: 'DELETE',
         headers,
       });
@@ -696,7 +696,7 @@ async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
   async completeOrder(orderId: number): Promise<Order> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.orders}/orders/${orderId}/complete`, {
+      const response = await fetch(`${API_BASE_URL.orders}orders/${orderId}/complete`, {
         method: 'POST',
         headers,
       });
@@ -722,7 +722,7 @@ async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
   async cancelOrder(orderId: number): Promise<Order> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.orders}/orders/${orderId}/cancel`, {
+      const response = await fetch(`${API_BASE_URL.orders}orders/${orderId}/cancel`, {
         method: 'POST',
         headers,
       });
@@ -748,7 +748,7 @@ async updateOrderStatus(orderId: number, status: OrderStatus): Promise<Order> {
   async getAllCustomersOrders(): Promise<Order[]> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.orders}/orders`, {
+      const response = await fetch(`${API_BASE_URL.orders}orders`, {
         headers,
       });
 
@@ -811,7 +811,7 @@ export const paymentsApi = {
   async createPayment(payment: CreatePaymentRequest): Promise<Payment> {
     try {
       const headers = await getAuthHeaders(authApi.getTokenTimestamp(), true);
-      const response = await fetch(`${API_BASE_URL.payment}/payments`, {
+      const response = await fetch(`${API_BASE_URL.payment}payments`, {
         method: 'POST',
         headers,
         body: JSON.stringify(payment),
@@ -841,7 +841,7 @@ export const paymentsApi = {
       throw new Error('Authentication required');
     }
   
-    const response = await fetch(`${API_BASE_URL.payment}/payments/successful`, {
+    const response = await fetch(`${API_BASE_URL.payment}payments/successful`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -862,7 +862,7 @@ export const paymentsApi = {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL.payment}/payments/${paymentId}`, {
+    const response = await fetch(`${API_BASE_URL.payment}payments/${paymentId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -882,7 +882,7 @@ export const paymentsApi = {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL.payment}/payments/order/${orderId}`, {
+    const response = await fetch(`${API_BASE_URL.payment}payments/order/${orderId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },

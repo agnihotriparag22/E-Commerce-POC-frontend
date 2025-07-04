@@ -7,6 +7,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 
+// Static userId to username mapping
+const userIdToUsername: Record<number, string> = {
+  1: "admin",
+  2: "prakhar",
+  3: "hrishab",
+  4: "parag",
+  5: "ishita",
+  6: "sanika",
+  7: "viral",
+  8: "rachit",
+  9: "abhishek",
+ 10: "shefali",
+ 11: "anshu",
+ 12: "vividh",
+ 13: "durgesh",
+ 14: "aditya",
+ 15: "rajkuwar",
+};
+
 export function OrderManagement() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -95,9 +114,7 @@ export function OrderManagement() {
               <TableRow>
                 <TableHead className="font-normal">Order ID</TableHead>
                 <TableHead className="font-normal">Customer</TableHead>
-                <TableHead className="font-normal">Product</TableHead>
-                <TableHead className="font-normal">Quantity</TableHead>
-                <TableHead className="font-normal">Date</TableHead>
+               
                 <TableHead className="font-normal">Status</TableHead>
                 <TableHead className="font-normal">Actions</TableHead>
               </TableRow>
@@ -106,10 +123,9 @@ export function OrderManagement() {
               {orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-normal">#{order.id}</TableCell>
-                  <TableCell className="font-light">User {order.user_id}</TableCell>
-                  <TableCell className="font-light">{order.product_id}</TableCell>
-                  <TableCell className="font-light">{order.quantity}</TableCell>
-                  <TableCell className="font-light">{order.created_at}</TableCell>
+                  <TableCell className="font-light">
+                    {userIdToUsername[order.user_id] || `User ${order.user_id}`}
+                  </TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(order.status)}>
                       {order.status}
