@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Eye } from "lucide-react"
 import Link from "next/link"
+import { useState } from "react"
 
 // Static productId to productName mapping
 const productIdToName: Record<number, string> = {
@@ -65,6 +66,7 @@ const productIdToName: Record<number, string> = {
 
 export function RecentOrders() {
   const { user } = useAuth()
+  const [visibleCount, setVisibleCount] = useState(10);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders", user?.id],
@@ -72,7 +74,9 @@ export function RecentOrders() {
     enabled: !!user,
   })
 
-  const recentOrders = orders.slice(0, 20)
+  // Sort orders by descending order id (latest first)
+  const sortedOrders = [...orders].sort((a, b) => b.id - a.id);
+  const recentOrders = sortedOrders.slice(0, visibleCount);
 
   const formatPrice = (price: number | undefined | null) => {
     if (price === undefined || price === null || isNaN(price)) {
@@ -152,6 +156,17 @@ export function RecentOrders() {
                 </div>
               </div>
             ))}
+            {visibleCount < sortedOrders.length && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setVisibleCount((prev) => prev + 10)}
+                  className="border-gray-300 bg-white hover:bg-gray-50"
+                >
+                  Load More
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
