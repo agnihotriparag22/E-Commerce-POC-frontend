@@ -52,6 +52,7 @@ export default function CheckoutPage() {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<CheckoutForm>({
     defaultValues: {
       firstName: "",
@@ -62,6 +63,13 @@ export default function CheckoutPage() {
       cvv: "",
     },
   })
+
+  // Add derived state for card and cvv validity
+  const cardNumberValue = watch("cardNumber")?.replace(/\D/g, "") || "";
+  const cvvValue = watch("cvv")?.replace(/\D/g, "") || "";
+  const isCardNumberValid = cardNumberValue.length === 16;
+  const isCvvValid = cvvValue.length === 3;
+  const isPlaceOrderDisabled = !isCardNumberValid || !isCvvValid || isLoading;
 
   const createOrderMutation = useMutation({
     mutationFn: ordersApi.createOrder,
@@ -222,6 +230,9 @@ export default function CheckoutPage() {
                         className={`border-gray-300 ${errors.cardNumber ? "border-red-500" : ""}`}
                       />
                       {errors.cardNumber && <p className="text-sm text-red-500">{errors.cardNumber.message}</p>}
+                      {cardNumberValue.length > 0 && !isCardNumberValid && (
+                        <p className="text-sm text-red-500">Card number must be 16 digits</p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -248,6 +259,9 @@ export default function CheckoutPage() {
                           className={`border-gray-300 ${errors.cvv ? "border-red-500" : ""}`}
                         />
                         {errors.cvv && <p className="text-sm text-red-500">{errors.cvv.message}</p>}
+                        {cvvValue.length > 0 && !isCvvValid && (
+                          <p className="text-sm text-red-500">CVV must be 3 digits</p>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -256,11 +270,9 @@ export default function CheckoutPage() {
                 <Button
                   type="submit"
                   className="w-full bg-black text-white hover:bg-gray-800 border-0"
-                  size="lg"
-                  disabled={isLoading}
+                  disabled={isPlaceOrderDisabled}
                 >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Place Order
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Place Order"}
                 </Button>
               </form>
             </div>
