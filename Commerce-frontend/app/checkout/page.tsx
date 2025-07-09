@@ -1,0 +1,325 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { useMutation } from "@tanstack/react-query"
+import { ProtectedRoute } from "@/components/protected-route"
+import { Header } from "@/components/layout/header"
+import { useCart } from "@/contexts/cart-context"
+import { useAuth } from "@/contexts/auth-context"
+import { ordersApi, authApi } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
+
+interface CheckoutForm {
+  firstName: string
+  lastName: string
+  email: string
+  cardNumber: string
+  expiryDate: string
+  cvv: string
+}
+
+export default function CheckoutPage() {
+  const [step, setStep] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const { items, totalPrice, clearCart } = useCart()
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (items.length === 0) {
+      router.push("/cart")
+    }
+  }, [items.length, router])
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+    }).format(price)
+  }
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch,
+  } = useForm<CheckoutForm>({
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: user?.email || "",
+      cardNumber: "",
+      expiryDate: "",
+      cvv: "",
+    },
+  })
+
+  // Add derived state for card and cvv validity
+  const cardNumberValue = watch("cardNumber")?.replace(/\D/g, "") || "";
+  const cvvValue = watch("cvv")?.replace(/\D/g, "") || "";
+  const isCardNumberValid = cardNumberValue.length === 16;
+  const isCvvValid = cvvValue.length === 3;
+  const isPlaceOrderDisabled = !isCardNumberValid || !isCvvValid || isLoading;
+
+  const createOrderMutation = useMutation({
+    mutationFn: ordersApi.createOrder,
+    onSuccess: () => {
+      clearCart()
+      toast({
+        title: "Order placed successfully!",
+        description: "Thank you for your purchase. You will receive a confirmation email shortly.",
+      })
+      router.push("/dashboard")
+    },
+  })
+
+  const onSubmit = async (data: CheckoutForm) => {
+    setIsLoading(true)
+    console.log('onSubmit called, starting order placement...');
+    await new Promise(res => setTimeout(res, 1000)); // Temporary 1s delay for loader visibility
+    try {
+      // Verify token is still valid before proceeding
+      const token = authApi.getStoredToken();
+      const tokenTimestamp = authApi.getTokenTimestamp();
+      
+      if (!token || !tokenTimestamp || Date.now() >= tokenTimestamp) {
+        toast({
+          title: "Session expired",
+          description: "Your session has expired. Please login again to complete your purchase.",
+          variant: "destructive",
+        });
+        router.push("/login");
+        return;
+      }
+
+      // Calculate total amount for all items
+      const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      // Send a single order request with all items
+      await ordersApi.createOrder({
+        user_id: user?.id || 0,
+        items: items.map(item => ({
+          product_id: item.id.toString(),
+          quantity: item.quantity,
+        })),
+        payment_info: {
+          card_number: data.cardNumber.replace(/\s/g, ''),
+          card_holder_name: `${data.firstName} ${data.lastName}`,
+          expiry_date: data.expiryDate,
+          cvv: data.cvv,
+          amount: totalAmount,
+        },
+      });
+
+      clearCart();
+      toast({
+        title: "Order placed successfully!",
+        description: "Thank you for your purchase. You will receive a confirmation email shortly.",
+      });
+      router.push("/dashboard");
+
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('Session expired')) {
+          toast({
+            title: "Session expired",
+            description: "Your session has expired. Please login again to complete your purchase.",
+            variant: "destructive",
+          });
+          router.push("/login");
+        } else {
+          toast({
+            title: "Error processing order",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Error processing order",
+          description: "Failed to process order. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  };
+
+  return (
+    <ProtectedRoute>
+      <div className="min-h-screen bg-white">
+        <Header />
+
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-2xl font-light mb-8">Checkout</h1>
+
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {/* Shipping Information */}
+                <Card className="border border-gray-200 shadow-none">
+                  <CardHeader>
+                    <CardTitle className="font-normal">Shipping Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName" className="font-normal">
+                          First Name
+                        </Label>
+                        <Input
+                          id="firstName"
+                          {...register("firstName", { required: "First name is required" })}
+                          className={`border-gray-300 ${errors.firstName ? "border-red-500" : ""}`}
+                        />
+                        {errors.firstName && <p className="text-sm text-red-500">{errors.firstName.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName" className="font-normal">
+                          Last Name
+                        </Label>
+                        <Input
+                          id="lastName"
+                          {...register("lastName", { required: "Last name is required" })}
+                          className={`border-gray-300 ${errors.lastName ? "border-red-500" : ""}`}
+                        />
+                        {errors.lastName && <p className="text-sm text-red-500">{errors.lastName.message}</p>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="font-normal">
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        {...register("email", { required: "Email is required" })}
+                        className={`border-gray-300 ${errors.email ? "border-red-500" : ""}`}
+                      />
+                      {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Payment Information */}
+                <Card className="border border-gray-200 shadow-none">
+                  <CardHeader>
+                    <CardTitle className="font-normal">Payment Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cardNumber" className="font-normal">
+                        Card Number
+                      </Label>
+                      <Input
+                        id="cardNumber"
+                        placeholder="1234 5678 9012 3456"
+                        {...register("cardNumber", { required: "Card number is required" })}
+                        className={`border-gray-300 ${errors.cardNumber ? "border-red-500" : ""}`}
+                      />
+                      {errors.cardNumber && <p className="text-sm text-red-500">{errors.cardNumber.message}</p>}
+                      {cardNumberValue.length > 0 && !isCardNumberValid && (
+                        <p className="text-sm text-red-500">Card number must be 16 digits</p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="expiryDate" className="font-normal">
+                          Expiry Date
+                        </Label>
+                        <Input
+                          id="expiryDate"
+                          placeholder="MM/YY"
+                          {...register("expiryDate", { required: "Expiry date is required" })}
+                          className={`border-gray-300 ${errors.expiryDate ? "border-red-500" : ""}`}
+                        />
+                        {errors.expiryDate && <p className="text-sm text-red-500">{errors.expiryDate.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cvv" className="font-normal">
+                          CVV
+                        </Label>
+                        <Input
+                          id="cvv"
+                          placeholder="123"
+                          {...register("cvv", { required: "CVV is required" })}
+                          className={`border-gray-300 ${errors.cvv ? "border-red-500" : ""}`}
+                        />
+                        {errors.cvv && <p className="text-sm text-red-500">{errors.cvv.message}</p>}
+                        {cvvValue.length > 0 && !isCvvValid && (
+                          <p className="text-sm text-red-500">CVV must be 3 digits</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-black text-white hover:bg-gray-800 border-0"
+                  disabled={isPlaceOrderDisabled}
+                >
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Place Order"}
+                </Button>
+              </form>
+            </div>
+
+            {/* Order Summary */}
+            <div>
+              <Card className="border border-gray-200 shadow-none">
+                <CardHeader>
+                  <CardTitle className="font-normal">Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {items.map((item) => (
+                    <div key={item.id} className="flex justify-between font-light">
+                      <span>
+                        {item.name} x {item.quantity}
+                      </span>
+                      <span>{formatPrice(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
+
+                  <Separator className="border-gray-200" />
+
+                  <div className="flex justify-between font-light">
+                    <span>Subtotal</span>
+                    <span>{formatPrice(totalPrice)}</span>
+                  </div>
+                  <div className="flex justify-between font-light">
+                    <span>Shipping</span>
+                    <span>Free</span>
+                  </div>
+                  <div className="flex justify-between font-light">
+                    <span>GST (18%)</span>
+                    <span>{formatPrice(totalPrice * 0.18)}</span>
+                  </div>
+
+                  <Separator className="border-gray-200" />
+
+                  <div className="flex justify-between text-lg font-normal">
+                    <span>Total</span>
+                    <span>{formatPrice(totalPrice * 1.18)} </span>
+                  </div>
+                </CardContent> 
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ProtectedRoute>
+  )
+}
